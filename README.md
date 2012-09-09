@@ -11,6 +11,7 @@ is prepended to PATH via a shell script installed under `/etc/profile.d/`.
 
 This cookbook currently provides
 
+ * GHC 7.6 with Platform 2012.02
  * GHC 7.4 with Platform 2012.02
  * GHC 7.0 with Platform 2011.02.
 
@@ -25,7 +26,7 @@ Recent Debian or Ubuntu releases (10.04+) should work.
 
 ## Recipes
 
- * `haskell::source` provisions the most recent GHC (7.4) and Haskell Platform (2012.02) releases from source.
+ * `haskell::source` provisions the most recent GHC (7.6 or 7.4) and Haskell Platform (2012.02) releases from source.
  * `haskell::package` provisions older GHC (7.0) and Haskell Platform (2011.02) releases from apt packages.
 
 Main recipe includes `haskell::source`.
@@ -33,7 +34,7 @@ Main recipe includes `haskell::source`.
 
 ## Attributes
 
-* `node[:ghc]:version`: GHC version. `"7.4.1"` by default. Keep in mind that Haskell Platform currently stringly checks GHC version to be equal to `7.4.1` and thus fails to build with GHC 7.4.2.
+* `node[:ghc]:version`: GHC version. `"7.4.1"` by default. Set to `"7.6.1"` to provision 7.6. Keep in mind that Haskell Platform may stringly check GHC version.
 
 
 ## Dependencies
