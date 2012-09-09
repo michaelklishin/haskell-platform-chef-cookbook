@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: haskell
-# Recipe:: platform
+# Recipe:: ghc
 # Copyright 2012, Travis CI development team
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,42 +21,58 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-include_recipe "haskell::ghc"
+%w(libgmp3-dev freeglut3 freeglut3-dev).each do |pkg|
+  package(pkg) do
+    action :install
+  end
+end
+
+case [node.platform, node.platform_version]
+when ["ubuntu", "11.10"] then
+  link "/usr/lib/libgmp.so.3" do
+    to "/usr/lib/libgmp.so"
+
+    not_if "test -L /usr/lib/libgmp.so.3"
+  end
+when ["ubuntu", "12.04"] then
+  package "libgmp3c2"
+
+  link "/usr/lib/libgmp.so.3" do
+    to "/usr/lib/libgmp.so.3.5.2"
+
+    not_if "test -L /usr/lib/libgmp.so.3"
+  end
+end
+
 
 require "tmpdir"
 
 td            = Dir.tmpdir
-local_tarball = File.join(td, "haskell-platform-#{node.haskell.platform.version}.tar.gz")
+local_tarball = File.join(td, "ghc-#{node.ghc.version}-#{node.ghc.arch}-unknown-linux.tar.bz2")
 
 remote_file(local_tarball) do
-  source "http://lambda.haskell.org/platform/download/#{node.haskell.platform.version}/haskell-platform-#{node.haskell.platform.version}.tar.gz"
+  source "http://www.haskell.org/ghc/dist/#{node.ghc.version}/ghc-#{node.ghc.version}-#{node.ghc.arch}-unknown-linux.tar.bz2"
 
   not_if "test -f #{local_tarball}"
 end
 
 # 2. Extract it
 # 3. configure, make install
-bash "build and install Haskell Platform" do
+bash "build and install GHC" do
   user "root"
   cwd  "/tmp"
 
   code <<-EOS
-    tar zfx #{local_tarball}
-    cd `tar -tf #{local_tarball} | head -n 1`
-
-    which ghc
-    ghc --version
+    tar jfx #{local_tarball}
+    cd ghc-#{node.ghc.version}
 
     ./configure
-    make
-    make install
+    sudo make install
     cd ../
-    rm -rf `tar -tf #{local_tarball} | head -n 1`
+    rm -rf ghc-#{node.ghc.version}
     rm #{local_tarball}
-
-    cabal update
-    cabal install hunit c2hs
   EOS
 
-  creates "/usr/local/bin/cabal"
+  creates "/usr/local/bin/ghc"
+  not_if "ghc --version | grep #{node.ghc.version}"
 end

@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: haskell
-# Recipe:: ghc
+# Recipe:: platform_ppa
 # Copyright 2012, Travis CI development team
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,47 +21,48 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-%w(libgmp3-dev freeglut3 freeglut3-dev).each do |pkg|
-  package(pkg) do
-    action :install
+case node['platform']
+when "ubuntu"
+  if node[:platform_version].to_f < 11.10
+    apt_repository "mbeloborodiy_haskell_platform" do
+      uri          "http://ppa.launchpad.net/mbeloborodiy/ppa/ubuntu/"
+      distribution node['lsb']['codename']
+      components   ['main']
+
+      key          "F6B6FC93"
+      keyserver    "keyserver.ubuntu.com"
+
+      action :add
+    end
   end
 end
 
-link "/usr/lib/libgmp.so.3" do
-  to "/usr/lib/libgmp.so"
+script "initialize cabal" do
+  interpreter "bash"
+  user node.travis_build_environment.user
+  cwd  node.travis_build_environment.home
 
-  not_if "test -L /usr/lib/libgmp.so.3"
+  environment Hash['HOME' => node.travis_build_environment.home]
+
+  code <<-SH
+  cabal update
+  cabal install c2hs
+  SH
+
+  # triggered by haskell-platform installation
+  action :nothing
+  # until http://haskell.1045720.n5.nabble.com/Cabal-install-fails-due-to-recent-HUnit-tt5715081.html#none is resolved :( MK.
+  ignore_failure true
 end
 
+package "haskell-platform" do
+  action :install
 
-require "tmpdir"
-
-td            = Dir.tmpdir
-local_tarball = File.join(td, "ghc-#{node.ghc.version}-i386-unknown-linux.tar.bz2")
-
-remote_file(local_tarball) do
-  source "http://www.haskell.org/ghc/dist/#{node.ghc.version}/ghc-#{node.ghc.version}-#{node.ghc.arch}-unknown-linux.tar.bz2"
-
-  not_if "test -f #{local_tarball}"
+  notifies :run, resources(:script => "initialize cabal")
 end
 
-# 2. Extract it
-# 3. configure, make install
-bash "build and install GHC" do
-  user "root"
-  cwd  "/tmp"
-
-  code <<-EOS
-    tar jfx #{local_tarball}
-    cd ghc-#{node.ghc.version}
-
-    ./configure
-    sudo make install
-    cd ../
-    rm -rf ghc-#{node.ghc.version}
-    rm #{local_tarball}
-  EOS
-
-  creates "/usr/local/bin/ghc"
-  not_if "ghc --version | grep #{node.ghc.version}"
+cookbook_file "/etc/profile.d/cabal.sh" do
+  owner node.travis_build_environment.user
+  group node.travis_build_environment.group
+  mode 0755
 end
