@@ -44,6 +44,6 @@ None.
 
 ## Copyright & License
 
-Michael S. Klishin, Travis CI Development Team, 2012.
+Michael S. Klishin, Travis CI Development Team, 2012-14.
 
 Released under the [Apache 2.0 license](http://www.apache.org/licenses/LICENSE-2.0.html).
